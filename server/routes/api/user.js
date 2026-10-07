@@ -7,6 +7,8 @@ const auth = require('../../middleware/auth');
 const role = require('../../middleware/role');
 const { ROLES } = require('../../constants');
 
+const UPDATABLE_PROFILE_FIELDS = ['firstName', 'lastName', 'phoneNumber'];
+
 // search users api
 router.get('/search', auth, role.check(ROLES.Admin), async (req, res) => {
   try {
@@ -87,12 +89,19 @@ router.get('/me', auth, async (req, res) => {
 router.put('/', auth, async (req, res) => {
   try {
     const user = req.user._id;
-    const update = req.body.profile;
+    const profile = req.body.profile || {};
     const query = { _id: user };
+
+    const update = {};
+    for (const field of UPDATABLE_PROFILE_FIELDS) {
+      if (profile[field] !== undefined) {
+        update[field] = profile[field];
+      }
+    }
 
     const userDoc = await User.findOneAndUpdate(query, update, {
       new: true
-    });
+    }).select('-password');
 
     res.status(200).json({
       success: true,
